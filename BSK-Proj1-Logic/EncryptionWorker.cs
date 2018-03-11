@@ -5,16 +5,12 @@ using System.Threading;
 
 namespace BSK_Proj1_Logic
 {
-    public class TempClass
+    public class EncryptionWorker
     {
-        private readonly BackgroundWorker _backgroundWorker;
+        public BackgroundWorker BackgroundWorker { get; set; }
         private readonly string _keyFileName = "3dskey.key";
         private readonly string _ivFileName = "3dsiv.key";
-
-        public TempClass(BackgroundWorker backgroundWorker)
-        {
-            _backgroundWorker = backgroundWorker;
-        }
+        
 
         // Load 3DES key from generated file
         // Generate 3DES key if none is present
@@ -57,15 +53,16 @@ namespace BSK_Proj1_Logic
 
         // Encrypts given file with 3DES algorithm
         // Then overwrites the original file with encrypted
-        public void EncryptFile(string fileName)
+        public void EncryptFile(string fileName, string outName)
         {
-            string outName = Path.GetFileNameWithoutExtension(fileName) + ".c3d.tmp.enc";
+            string outputName = Path.GetFileNameWithoutExtension(outName) + ".c3d.tmp.enc";
             var tdesKey = LoadTripleDESKey();
             var tdesIV = LoadTripleDESIV();
 
             FileStream fin = new FileStream(fileName, FileMode.Open, FileAccess.Read);
             FileStream fout = new FileStream(outName, FileMode.OpenOrCreate, FileAccess.Write);
-            fout.SetLength(0);
+            FileStream foutTemp = new FileStream(outputName, FileMode.OpenOrCreate, FileAccess.Write);
+            foutTemp.SetLength(0);
 
             byte[] bin = new byte[100]; 
             long rdlen = 0;              
@@ -73,21 +70,23 @@ namespace BSK_Proj1_Logic
             int len;                     
 
             TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
-            CryptoStream encStream = new CryptoStream(fout, tdes.CreateEncryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
+            CryptoStream encStream = new CryptoStream(foutTemp, tdes.CreateEncryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
 
             while (rdlen < totlen)
             {
                 len = fin.Read(bin, 0, 100);
                 encStream.Write(bin, 0, len);
                 rdlen = rdlen + len;
-                _backgroundWorker.ReportProgress((int)((rdlen/totlen)*100));
+                var progressValue = ((double)rdlen / (double)totlen)* 100.0;
+                BackgroundWorker.ReportProgress((int)progressValue);
             }
 
             encStream.Close();
             fin.Close();
             fout.Close();
-            File.Copy(outName, fileName, true);
-            File.Delete(outName);
+            foutTemp.Close();
+            File.Copy(outputName, outName, true);
+            File.Delete(outputName);
         }
 
         // Decrypts given file with 3DES algorithm
@@ -115,7 +114,8 @@ namespace BSK_Proj1_Logic
                 len = fin.Read(bin, 0, 100);
                 encStream.Write(bin, 0, len);
                 rdlen = rdlen + len;
-                _backgroundWorker.ReportProgress((int)((rdlen / totlen) * 100));
+                var progressValue = ((double)rdlen / (double)totlen) * 100.0;
+                BackgroundWorker.ReportProgress((int)progressValue);
             }
 
             encStream.Close();

@@ -1,5 +1,6 @@
 ﻿using BSK_Proj1_Logic;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 
 namespace BSK_Proj1_GUI
@@ -11,7 +12,7 @@ namespace BSK_Proj1_GUI
     {
         private string _filename;
 
-        private TempClass _tempClass;
+        private EncryptionWorker _encryptionWorker;
         private BackgroundWorker _backgroundWorker;
 
         public MainWindow()
@@ -21,7 +22,7 @@ namespace BSK_Proj1_GUI
             EncryptButton.IsEnabled = false;
 
             _backgroundWorker = new BackgroundWorker();
-            _tempClass = new TempClass(_backgroundWorker);
+            _encryptionWorker = new EncryptionWorker();
         }
 
         private void ChooseFileButtom_Click(object sender, RoutedEventArgs e)
@@ -39,29 +40,40 @@ namespace BSK_Proj1_GUI
             }
         }
 
-        private async void EncryptButton_Click(object sender, RoutedEventArgs e)
+        private void EncryptButton_Click(object sender, RoutedEventArgs e)
         {
-            DoWorkEventHandler workTask = (s, args) => _tempClass.EncryptFile(_filename);
-            RunWorkerCompletedEventHandler workCompleted = null;
-            workCompleted = (s, args) =>
+            var fileNameDialog = new FileNameDialog();
+            fileNameDialog.ShowDialog();
+            var outputName = string.Empty;
+            if (fileNameDialog.FileName != string.Empty)
             {
-                MessageBox.Show("Done");
+                var filePath = Path.GetDirectoryName(_filename);
+                var extension = Path.GetExtension(_filename);
+                var newPath = Path.Combine(filePath, fileNameDialog.FileName);
+                outputName = newPath + extension;
+            }
+            else
+            {
+                outputName = _filename;
+            }
 
-                // Remove this task from list, so when decrypt is called
-                // right after encrypt it does not encrypt second time
-                _backgroundWorker.DoWork -= workTask;
-                _backgroundWorker.RunWorkerCompleted -= workCompleted;
-            };
-            _backgroundWorker.WorkerReportsProgress = true;
-            _backgroundWorker.DoWork += workTask;
-            _backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
-            _backgroundWorker.RunWorkerCompleted += workCompleted;
+            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.EncryptFile(_filename, outputName);
+            _backgroundWorker = AssignBackgroundWorkerTasks(workTask);
+            _encryptionWorker.BackgroundWorker = _backgroundWorker;
             _backgroundWorker.RunWorkerAsync();
         }
 
         private void DecryptButton_Click(object sender, RoutedEventArgs e)
         {
-            DoWorkEventHandler workTask = (s, args) => _tempClass.DecryptFile(_filename);
+            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.DecryptFile(_filename);
+            _backgroundWorker = AssignBackgroundWorkerTasks(workTask);
+            _encryptionWorker.BackgroundWorker = _backgroundWorker;
+            _backgroundWorker.RunWorkerAsync();
+        }
+
+        private BackgroundWorker AssignBackgroundWorkerTasks(DoWorkEventHandler doWorkEventHandler)
+        {
+            var backgroundWorker = new BackgroundWorker();
             RunWorkerCompletedEventHandler workCompleted = null;
             workCompleted = (s, args) =>
             {
@@ -69,14 +81,15 @@ namespace BSK_Proj1_GUI
 
                 // Remove this task from list, so when decrypt is called
                 // right after encrypt it does not encrypt second time
-                _backgroundWorker.DoWork -= workTask;
-                _backgroundWorker.RunWorkerCompleted -= workCompleted;
+                backgroundWorker.DoWork -= doWorkEventHandler;
+                backgroundWorker.RunWorkerCompleted -= workCompleted;
             };
-            _backgroundWorker.WorkerReportsProgress = true;
-            _backgroundWorker.DoWork += workTask;
-            _backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
-            _backgroundWorker.RunWorkerCompleted += workCompleted;
-            _backgroundWorker.RunWorkerAsync();
+            backgroundWorker.WorkerReportsProgress = true;
+            backgroundWorker.DoWork += doWorkEventHandler;
+            backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
+            backgroundWorker.RunWorkerCompleted += workCompleted;
+
+            return backgroundWorker;
         }
 
         private void UpdateProgressChanged(object sender, ProgressChangedEventArgs e)

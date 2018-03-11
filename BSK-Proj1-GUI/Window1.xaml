@@ -1,0 +1,15 @@
+﻿<Window x:Class="BSK_Proj1_GUI.FileNameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BSK_Proj1_GUI"
+        mc:Ignorable="d"
+        Title="Window1" Height="151.958" Width="300">
+    <Grid>
+        <Button x:Name="button" Content="Ok" HorizontalAlignment="Left" Margin="107,91,0,0" VerticalAlignment="Top" Width="75" Click="button_Click"/>
+        <TextBox x:Name="OutputFileNameTextBox" HorizontalAlignment="Left" Height="23" Margin="10,41,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="272"/>
+        <Label x:Name="label" Content="Output filename" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+
+    </Grid>
+</Window>
