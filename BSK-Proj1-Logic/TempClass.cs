@@ -12,6 +12,8 @@ namespace BSK_Proj1_Logic
             _backgroundWorker = backgroundWorker;
         }
 
+        // trying to separate stuff from gui logic
+        // so that we can report it to the main threads later
         public void EncryptFile()
         {
             var result = 0;
