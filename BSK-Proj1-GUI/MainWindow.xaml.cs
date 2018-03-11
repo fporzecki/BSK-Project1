@@ -1,6 +1,7 @@
 ﻿using BSK_Proj1_Logic;
 using System.ComponentModel;
 using System.IO;
+using System.Security.Cryptography;
 using System.Windows;
 
 namespace BSK_Proj1_GUI
@@ -57,10 +58,25 @@ namespace BSK_Proj1_GUI
                 outputName = _filename;
             }
 
-            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.EncryptFile(_filename, outputName);
+            var cipherMode = GetCipherMode();
+            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.EncryptFile(_filename, outputName, cipherMode);
             _backgroundWorker = AssignBackgroundWorkerTasks(workTask);
             _encryptionWorker.BackgroundWorker = _backgroundWorker;
             _backgroundWorker.RunWorkerAsync();
+        }
+
+        private CipherMode GetCipherMode()
+        {
+            var encryptionMode = EncryptionModeComboBox.Text;
+            var cipherMode = CipherMode.ECB;
+            if (encryptionMode == "CBC")
+                cipherMode = CipherMode.CBC;
+            if (encryptionMode == "OFB")
+                cipherMode = CipherMode.OFB;
+            if (encryptionMode == "CFB")
+                cipherMode = CipherMode.CFB;
+
+            return cipherMode;
         }
 
         private void DecryptButton_Click(object sender, RoutedEventArgs e)

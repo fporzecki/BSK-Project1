@@ -53,7 +53,7 @@ namespace BSK_Proj1_Logic
 
         // Encrypts given file with 3DES algorithm
         // Then overwrites the original file with encrypted
-        public void EncryptFile(string fileName, string outName)
+        public void EncryptFile(string fileName, string outName, CipherMode cipherMode)
         {
             string outputName = Path.GetFileNameWithoutExtension(outName) + ".c3d.tmp.enc";
             var tdesKey = LoadTripleDESKey();
@@ -70,6 +70,8 @@ namespace BSK_Proj1_Logic
             int len;                     
 
             TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
+            tdes.Mode = cipherMode;
+
             CryptoStream encStream = new CryptoStream(foutTemp, tdes.CreateEncryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
 
             while (rdlen < totlen)
