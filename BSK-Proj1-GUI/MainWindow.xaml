@@ -8,7 +8,7 @@
         Title="BSK-Project1" Height="188" Width="372">
     <Grid Margin="0,0,2,0">
         <Button x:Name="EncryptButton" Content="Encrypt" HorizontalAlignment="Left" Margin="10,108,0,0" VerticalAlignment="Top" Width="75" Click="EncryptButton_Click"/>
-        <Button x:Name="DecryptButton" Content="Decrypt" HorizontalAlignment="Left" Margin="122,108,0,0" VerticalAlignment="Top" Width="75"/>
+        <Button x:Name="DecryptButton" Content="Decrypt" HorizontalAlignment="Left" Margin="122,108,0,0" VerticalAlignment="Top" Width="75" Click="DecryptButton_Click"/>
         <Label x:Name="label1" Content="Encryption mode" HorizontalAlignment="Left" Margin="232,40,0,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="EncryptionModeComboBox" HorizontalAlignment="Left" Margin="232,66,0,0" VerticalAlignment="Top" Width="120" SelectedIndex="0">
             <ComboBoxItem>ECB</ComboBoxItem>

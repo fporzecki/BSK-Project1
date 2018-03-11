@@ -41,10 +41,41 @@ namespace BSK_Proj1_GUI
 
         private async void EncryptButton_Click(object sender, RoutedEventArgs e)
         {
+            DoWorkEventHandler workTask = (s, args) => _tempClass.EncryptFile(_filename);
+            RunWorkerCompletedEventHandler workCompleted = null;
+            workCompleted = (s, args) =>
+            {
+                MessageBox.Show("Done");
+
+                // Remove this task from list, so when decrypt is called
+                // right after encrypt it does not encrypt second time
+                _backgroundWorker.DoWork -= workTask;
+                _backgroundWorker.RunWorkerCompleted -= workCompleted;
+            };
             _backgroundWorker.WorkerReportsProgress = true;
-            _backgroundWorker.DoWork += (s, args) => _tempClass.EncryptFile();
+            _backgroundWorker.DoWork += workTask;
             _backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
-            _backgroundWorker.RunWorkerCompleted += (s, args) => MessageBox.Show("Done");
+            _backgroundWorker.RunWorkerCompleted += workCompleted;
+            _backgroundWorker.RunWorkerAsync();
+        }
+
+        private void DecryptButton_Click(object sender, RoutedEventArgs e)
+        {
+            DoWorkEventHandler workTask = (s, args) => _tempClass.DecryptFile(_filename);
+            RunWorkerCompletedEventHandler workCompleted = null;
+            workCompleted = (s, args) =>
+            {
+                MessageBox.Show("Done");
+
+                // Remove this task from list, so when decrypt is called
+                // right after encrypt it does not encrypt second time
+                _backgroundWorker.DoWork -= workTask;
+                _backgroundWorker.RunWorkerCompleted -= workCompleted;
+            };
+            _backgroundWorker.WorkerReportsProgress = true;
+            _backgroundWorker.DoWork += workTask;
+            _backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
+            _backgroundWorker.RunWorkerCompleted += workCompleted;
             _backgroundWorker.RunWorkerAsync();
         }
 
