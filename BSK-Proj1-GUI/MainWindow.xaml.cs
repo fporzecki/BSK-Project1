@@ -23,7 +23,8 @@ namespace BSK_Proj1_GUI
             EncryptButton.IsEnabled = false;
 
             _backgroundWorker = new BackgroundWorker();
-            _encryptionWorker = new EncryptionWorker();
+            _backgroundWorker.WorkerReportsProgress = true;
+            _encryptionWorker = new EncryptionWorker(_backgroundWorker);
         }
 
         private void ChooseFileButtom_Click(object sender, RoutedEventArgs e)
@@ -41,8 +42,17 @@ namespace BSK_Proj1_GUI
             }
         }
 
+        private void TriggerControlsState()
+        {
+            EncryptButton.IsEnabled = !EncryptButton.IsEnabled;
+            DecryptButton.IsEnabled = !DecryptButton.IsEnabled;
+            ChooseFileButtom.IsEnabled = !ChooseFileButtom.IsEnabled;
+        }
+
         private void EncryptButton_Click(object sender, RoutedEventArgs e)
         {
+            TriggerControlsState();
+
             var fileNameDialog = new FileNameDialog();
             fileNameDialog.ShowDialog();
             var outputName = string.Empty;
@@ -60,8 +70,7 @@ namespace BSK_Proj1_GUI
 
             var cipherMode = GetCipherMode();
             DoWorkEventHandler workTask = (s, args) => _encryptionWorker.EncryptFile(_filename, outputName, cipherMode);
-            _backgroundWorker = AssignBackgroundWorkerTasks(workTask);
-            _encryptionWorker.BackgroundWorker = _backgroundWorker;
+            AssignBackgroundWorkerTasks(workTask);
             _backgroundWorker.RunWorkerAsync();
         }
 
@@ -81,15 +90,15 @@ namespace BSK_Proj1_GUI
 
         private void DecryptButton_Click(object sender, RoutedEventArgs e)
         {
-            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.DecryptFile(_filename);
-            _backgroundWorker = AssignBackgroundWorkerTasks(workTask);
-            _encryptionWorker.BackgroundWorker = _backgroundWorker;
+            TriggerControlsState();
+            var cipherMode = GetCipherMode();
+            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.DecryptFile(_filename, cipherMode);
+            AssignBackgroundWorkerTasks(workTask);
             _backgroundWorker.RunWorkerAsync();
         }
 
-        private BackgroundWorker AssignBackgroundWorkerTasks(DoWorkEventHandler doWorkEventHandler)
+        private void AssignBackgroundWorkerTasks(DoWorkEventHandler doWorkEventHandler)
         {
-            var backgroundWorker = new BackgroundWorker();
             RunWorkerCompletedEventHandler workCompleted = null;
             workCompleted = (s, args) =>
             {
@@ -97,15 +106,14 @@ namespace BSK_Proj1_GUI
 
                 // Remove this task from list, so when decrypt is called
                 // right after encrypt it does not encrypt second time
-                backgroundWorker.DoWork -= doWorkEventHandler;
-                backgroundWorker.RunWorkerCompleted -= workCompleted;
+                _backgroundWorker.DoWork -= doWorkEventHandler;
+                _backgroundWorker.RunWorkerCompleted -= workCompleted;
+                TriggerControlsState();
             };
-            backgroundWorker.WorkerReportsProgress = true;
-            backgroundWorker.DoWork += doWorkEventHandler;
-            backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
-            backgroundWorker.RunWorkerCompleted += workCompleted;
-
-            return backgroundWorker;
+            _backgroundWorker.WorkerReportsProgress = true;
+            _backgroundWorker.DoWork += doWorkEventHandler;
+            _backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(UpdateProgressChanged);
+            _backgroundWorker.RunWorkerCompleted += workCompleted;
         }
 
         private void UpdateProgressChanged(object sender, ProgressChangedEventArgs e)
