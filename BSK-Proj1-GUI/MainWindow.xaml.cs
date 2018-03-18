@@ -1,4 +1,5 @@
 ﻿using BSK_Proj1_Logic;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Security.Cryptography;
@@ -68,31 +69,22 @@ namespace BSK_Proj1_GUI
                 outputName = _filename;
             }
 
-            var cipherMode = GetCipherMode();
+            var cipherMode = GetCipherModeFromGui();
             DoWorkEventHandler workTask = (s, args) => _encryptionWorker.EncryptFile(_filename, outputName, cipherMode);
             AssignBackgroundWorkerTasks(workTask);
             _backgroundWorker.RunWorkerAsync();
         }
 
-        private CipherMode GetCipherMode()
+        private CipherMode GetCipherModeFromGui()
         {
             var encryptionMode = EncryptionModeComboBox.Text;
-            var cipherMode = CipherMode.ECB;
-            if (encryptionMode == "CBC")
-                cipherMode = CipherMode.CBC;
-            if (encryptionMode == "OFB")
-                cipherMode = CipherMode.OFB;
-            if (encryptionMode == "CFB")
-                cipherMode = CipherMode.CFB;
-
-            return cipherMode;
+            return HelperClass.GetCipherMode(encryptionMode);
         }
 
         private void DecryptButton_Click(object sender, RoutedEventArgs e)
         {
             TriggerControlsState();
-            var cipherMode = GetCipherMode();
-            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.DecryptFile(_filename, cipherMode);
+            DoWorkEventHandler workTask = (s, args) => _encryptionWorker.DecryptXmlFile(_filename);
             AssignBackgroundWorkerTasks(workTask);
             _backgroundWorker.RunWorkerAsync();
         }
@@ -119,6 +111,21 @@ namespace BSK_Proj1_GUI
         private void UpdateProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             ProcessProgressBar.Value = (e.ProgressPercentage);
+        }
+
+        private void LoginTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+
+        }
+
+        private void PasswordTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+
+        }
+
+        private void AddUserButton_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

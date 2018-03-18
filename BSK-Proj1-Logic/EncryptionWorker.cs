@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace BSK_Proj1_Logic
 {
@@ -17,10 +21,83 @@ namespace BSK_Proj1_Logic
             _backgroundWorker = backgroundWorker;
         }
 
+        // Encrypts given file with 3DES algorithm
+        public void EncryptFile(string fileName, string outName, CipherMode cipherMode)
+        {
+            var outNameNoExtension = Path.GetFileNameWithoutExtension(outName);
+            var path = Path.GetDirectoryName(fileName);
+            var outputName = outNameNoExtension + ".c3d.tmp.enc";
+            var tdesKey = LoadTripleDESKey();
+            var tdesIV = LoadTripleDESIV();
+
+            var fin = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+            var foutTemp = new FileStream(outputName, FileMode.OpenOrCreate, FileAccess.Write);
+            var xmlOutputStream = new FileStream(Path.Combine(path, outNameNoExtension + ".xml"), FileMode.OpenOrCreate, FileAccess.Write);
+            foutTemp.SetLength(0);
+
+            var bin = new byte[100];         
+            var totlen = fin.Length;
+
+            var tdes = new TripleDESCryptoServiceProvider
+            {
+                Mode = cipherMode
+            };
+
+            var encStream = new CryptoStream(foutTemp, tdes.CreateEncryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
+            var fileInBase64 = ProcessFile(totlen, encStream, bin, fin);
+            encStream.Close();
+
+            var fileExtension = Path.GetExtension(fileName);
+
+            XmlComposer.CreateXml(new List<UserModel> { new UserModel("asd", "123") }, Convert.ToBase64String(tdesIV), Convert.ToString(cipherMode), 
+                tdes.BlockSize, tdes.KeySize, "TripleDES", fileInBase64, fileExtension).Save(xmlOutputStream);
+
+            xmlOutputStream.Close();
+
+            fin.Close();
+            foutTemp.Close();
+            File.Delete(outputName);
+        }
+
+        public void DecryptXmlFile(string fileName)
+        {
+            var tdesKey = LoadTripleDESKey();
+            var tdesIV = LoadTripleDESIV();
+
+            var file = XElement.Load(fileName);
+
+            var dataInBase64 = file.Descendants().First(x => x.Name.LocalName == "EncryptedData").Value;
+            var data = Convert.FromBase64String(Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(dataInBase64)));
+            var reader = new MemoryStream(data);
+
+            var totLen = reader.Length;
+
+            var cipherMode = file.Descendants().First(x => x.Name.LocalName == "CipherMode").Value;
+            var extension = file.Descendants().First(x => x.Name.LocalName == "FileExtension").Value;
+
+            var outputFile = new FileStream(Path.GetFileNameWithoutExtension(fileName) + extension, FileMode.OpenOrCreate, FileAccess.Write);
+            outputFile.SetLength(0);
+
+            var bin = new byte[100];
+
+            var tdes = new TripleDESCryptoServiceProvider
+            {
+                Mode = HelperClass.GetCipherMode(cipherMode)
+            };
+
+            var encStream = new CryptoStream(outputFile, tdes.CreateDecryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
+
+            ProcessFile(totLen, encStream, bin, reader);
+
+            encStream.Close();
+            outputFile.Close();
+            reader.Close();
+        }
+
         // Load 3DES key from generated file
         // Generate 3DES key if none is present
         // TODO: choosing files
-        public byte[] LoadTripleDESKey()
+        private byte[] LoadTripleDESKey()
         {
             byte[] key;
             try
@@ -39,7 +116,7 @@ namespace BSK_Proj1_Logic
         // Load IV key from generated file
         // Generate IV key if none is present
         // TODO: choosing files
-        public byte[] LoadTripleDESIV()
+        private byte[] LoadTripleDESIV()
         {
             byte[] key;
             try
@@ -56,76 +133,20 @@ namespace BSK_Proj1_Logic
             return key;
         }
 
-        // Encrypts given file with 3DES algorithm
-        // Then overwrites the original file with encrypted
-        public void EncryptFile(string fileName, string outName, CipherMode cipherMode)
-        {         
-            string outputName = Path.GetFileNameWithoutExtension(outName) + ".c3d.tmp.enc";
-            var tdesKey = LoadTripleDESKey();
-            var tdesIV = LoadTripleDESIV();
-
-            FileStream fin = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-            FileStream fout = new FileStream(outName, FileMode.OpenOrCreate, FileAccess.Write);
-            FileStream foutTemp = new FileStream(outputName, FileMode.OpenOrCreate, FileAccess.Write);
-            foutTemp.SetLength(0);
-
-            byte[] bin = new byte[100];         
-            long totlen = fin.Length;                      
-
-            TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
-            tdes.Mode = cipherMode;
-
-            CryptoStream encStream = new CryptoStream(foutTemp, tdes.CreateEncryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
-
-            ProcessFile(totlen, encStream, bin, fin);
-
-            encStream.Close();
-            fin.Close();
-            fout.Close();
-            foutTemp.Close();
-            File.Copy(outputName, outName, true);
-            File.Delete(outputName);
-        }
-
-        // Decrypts given file with 3DES algorithm
-        // Then overwrites the original file with decrypted
-        public void DecryptFile(string fileName, CipherMode cipherMode)
+        private string ProcessFile(long totlen, CryptoStream encStream, byte[] bin, Stream fin)
         {
-            string outName = Path.GetFileNameWithoutExtension(fileName) + ".c3d.tmp.dec";
-            var tdesKey = LoadTripleDESKey();
-            var tdesIV = LoadTripleDESIV();
+            var sb = new StringBuilder();
 
-            FileStream fin = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-            FileStream fout = new FileStream(outName, FileMode.OpenOrCreate, FileAccess.Write);
-            fout.SetLength(0);
-
-            byte[] bin = new byte[100];
-            long rdlen = 0;
-            long totlen = fin.Length;
-            int len;
-
-            TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider();
-            tdes.Mode = cipherMode;
-
-            CryptoStream encStream = new CryptoStream(fout, tdes.CreateDecryptor(tdesKey, tdesIV), CryptoStreamMode.Write);
-
-            ProcessFile(totlen, encStream, bin, fin);
-
-            encStream.Close();
-            fin.Close();
-            fout.Close();
-            File.Copy(outName, fileName, true);
-            File.Delete(outName);
-        }
-
-        private void ProcessFile(long totlen, CryptoStream encStream, byte[] bin, FileStream fin)
-        {
             long rdlen = 0;
             var prog = 0d;
             while (rdlen < totlen)
             {
                 var len = fin.Read(bin, 0, 100);
+
                 encStream.Write(bin, 0, len);
+                var binaryString = Convert.ToBase64String(Encoding.UTF8.GetBytes(Encoding.UTF8.GetChars(bin)));
+                sb.Append(binaryString);
+
                 rdlen = rdlen + len;
                 var progressValue = Math.Round(((double)rdlen / (double)totlen) * 100.0);
 
@@ -135,6 +156,8 @@ namespace BSK_Proj1_Logic
                     prog = progressValue;
                 }
             }
+
+            return sb.ToString();
         }
     }
 }

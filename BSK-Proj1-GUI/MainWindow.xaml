@@ -5,11 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BSK_Proj1_GUI"
         mc:Ignorable="d"
-        Title="BSK-Project1" Height="188" Width="372">
+        Title="BSK-Project1" Height="188" Width="601">
     <Grid Margin="0,0,2,0">
-        <Button x:Name="EncryptButton" Content="Encrypt" HorizontalAlignment="Left" Margin="10,108,0,0" VerticalAlignment="Top" Width="75" Click="EncryptButton_Click"/>
-        <Button x:Name="DecryptButton" Content="Decrypt" HorizontalAlignment="Left" Margin="122,108,0,0" VerticalAlignment="Top" Width="75" Click="DecryptButton_Click"/>
-        <Label x:Name="label1" Content="Encryption mode" HorizontalAlignment="Left" Margin="232,40,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="EncryptButton" Content="Encrypt" HorizontalAlignment="Left" Margin="10,121,0,0" VerticalAlignment="Top" Width="75" Click="EncryptButton_Click"/>
+        <Button x:Name="DecryptButton" Content="Decrypt" HorizontalAlignment="Left" Margin="122,121,0,0" VerticalAlignment="Top" Width="75" Click="DecryptButton_Click"/>
+        <Label x:Name="label1" Content="Encryption mode" HorizontalAlignment="Left" Margin="232,33,0,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="EncryptionModeComboBox" HorizontalAlignment="Left" Margin="232,66,0,0" VerticalAlignment="Top" Width="120" SelectedIndex="0">
             <ComboBoxItem>ECB</ComboBoxItem>
             <ComboBoxItem>CBC</ComboBoxItem>
@@ -19,6 +19,10 @@
         <ProgressBar HorizontalAlignment="Left" Height="15" Margin="10,73,0,0" VerticalAlignment="Top" Width="187" Minimum="0" Maximum="100" Name="ProcessProgressBar"/>
         <Button x:Name="ChooseFileButtom" Content="Choose file" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" Width="75" Click="ChooseFileButtom_Click"/>
         <Label x:Name="FileNameLabel" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="label" Content="User" HorizontalAlignment="Left" Margin="403,33,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="LoginTextBox" HorizontalAlignment="Left" Height="23" Margin="403,65,0,0" TextWrapping="Wrap" Text="Email" VerticalAlignment="Top" Width="120" TextChanged="LoginTextBox_TextChanged" />
+        <TextBox x:Name="PasswordTextBox" HorizontalAlignment="Left" Height="23" Margin="403,93,0,0" TextWrapping="Wrap" Text="Password" VerticalAlignment="Top" Width="120" TextChanged="PasswordTextBox_TextChanged" />
+        <Button x:Name="AddUserButton" Content="Add new" HorizontalAlignment="Left" Margin="403,121,0,0" VerticalAlignment="Top" Width="75" Click="AddUserButton_Click"/>
 
     </Grid>
 </Window>
