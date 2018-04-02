@@ -66,8 +66,8 @@ namespace BSK_Proj1_Logic
 
             var file = XElement.Load(fileName);
 
-            var dataInBase64 = file.Descendants().First(x => x.Name.LocalName == "EncryptedData").Value;
-            var data = Convert.FromBase64String(Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(dataInBase64)));
+            var dataInBase64 = file.Element("EncryptedData").Value;
+            var data = Convert.FromBase64String(dataInBase64);
             var reader = new MemoryStream(data);
 
             var totLen = reader.Length;
@@ -135,8 +135,6 @@ namespace BSK_Proj1_Logic
 
         private string ProcessFile(long totlen, CryptoStream encStream, byte[] bin, Stream fin)
         {
-            var sb = new StringBuilder();
-
             long rdlen = 0;
             var prog = 0d;
             while (rdlen < totlen)
@@ -144,8 +142,6 @@ namespace BSK_Proj1_Logic
                 var len = fin.Read(bin, 0, 100);
 
                 encStream.Write(bin, 0, len);
-                var binaryString = Convert.ToBase64String(Encoding.UTF8.GetBytes(Encoding.UTF8.GetChars(bin)));
-                sb.Append(binaryString);
 
                 rdlen = rdlen + len;
                 var progressValue = Math.Round(((double)rdlen / (double)totlen) * 100.0);
@@ -156,8 +152,13 @@ namespace BSK_Proj1_Logic
                     prog = progressValue;
                 }
             }
+            var bytes = new byte[encStream.Length];
 
-            return sb.ToString();
+            encStream.Read(bytes, 0, (int)encStream.Length);
+
+            var binaryString = Convert.ToBase64String(Encoding.UTF8.GetBytes(Encoding.UTF8.GetChars(bytes)));
+
+            return binaryString;
         }
     }
 }
