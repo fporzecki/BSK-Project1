@@ -29,8 +29,6 @@ namespace BSK_Proj1_Logic
             var tdesKey = LoadTripleDESKey();
             var tdesIV = LoadTripleDESIV();
 
-            using (var fin = new FileStream(fileName, FileMode.Open, FileAccess.Read))
-            {
                 using (var xmlOutputStream = new FileStream(Path.Combine(path, outNameNoExtension + ".xml"), FileMode.OpenOrCreate, FileAccess.Write))
                 {
                     var tdes = new TripleDESCryptoServiceProvider
@@ -38,48 +36,80 @@ namespace BSK_Proj1_Logic
                         Mode = cipherMode
                     };
 
-                    var encryptedText = EncryptFileTest(fin, tdes);
+                    var encryptedText = EncryptFileToXml(tdes, fileName);
 
                     var fileExtension = Path.GetExtension(fileName);
 
                     XmlComposer.CreateXml(new List<UserModel> { new UserModel("asd", "123") }, Convert.ToBase64String(tdesIV), Convert.ToString(cipherMode),
                         tdes.BlockSize, tdes.KeySize, "TripleDES", encryptedText, fileExtension).Save(xmlOutputStream);
                 }
-            }
 
         }
 
         public void DecryptXmlFile(string fileName)
         {
-            //var tdesKey = LoadTripleDESKey();
-            //var tdesIV = LoadTripleDESIV();
+            var tdesKey = LoadTripleDESKey();
+            var tdesIV = LoadTripleDESIV();
 
-            //var file = XElement.Load(fileName);
+            var file = XElement.Load(fileName);
 
-            //var dataInBase64 = file.Element("EncryptedData").Value;
-            //var data = Convert.FromBase64String(dataInBase64);
-            //var reader = new MemoryStream(data);
+            var dataInBase64 = file.Element("EncryptedData").Value;
 
-            //var totLen = reader.Length;
 
-            //var cipherMode = file.Descendants().First(x => x.Name.LocalName == "CipherMode").Value;
-            //var extension = file.Descendants().First(x => x.Name.LocalName == "FileExtension").Value;
+            var data = Convert.FromBase64String(dataInBase64);
+            var reader = new MemoryStream(data);
 
-            //var outputFile = new FileStream(Path.GetFileNameWithoutExtension(fileName) + extension, FileMode.OpenOrCreate, FileAccess.Write);
-            //outputFile.SetLength(0);
+            var totLen = reader.Length;
 
-            //var tdes = new TripleDESCryptoServiceProvider
-            //{
-            //    Mode = HelperClass.GetCipherMode(cipherMode)
-            //};
+            var cipherMode = file.Descendants().First(x => x.Name.LocalName == "CipherMode").Value;
+            var extension = file.Descendants().First(x => x.Name.LocalName == "FileExtension").Value;
 
-            //var encStream = new CryptoStream(outputFile, tdes.CreateDecryptor(tdesKey, tdesIV), CryptoStreamMode.Write & CryptoStreamMode.Read);
 
-            //ProcessFile(totLen, encStream, reader);
+                var tdes = new TripleDESCryptoServiceProvider
+                {
+                    Mode = HelperClass.GetCipherMode(cipherMode)
+                };
 
-            //encStream.Close();
-            //outputFile.Close();
-            //reader.Close();
+
+                DecryptFileFromXml(dataInBase64, tdes, fileName, extension);
+
+            reader.Close();
+        }
+
+        private void DecryptFileFromXml(string encryptedText, TripleDESCryptoServiceProvider tdes, string fileName, string extension)
+        {
+            var key = LoadTripleDESKey();
+            var iv = LoadTripleDESIV();
+
+            var encryptedBytes = Convert.FromBase64String(encryptedText);
+
+            using (var memoryStream = new MemoryStream(encryptedBytes))
+            using (var outputFileStream = new FileStream(Path.GetFileNameWithoutExtension(fileName) + extension, FileMode.OpenOrCreate))
+            using (var outputStream = new CryptoStream(memoryStream, new FromBase64Transform(), CryptoStreamMode.Read))
+            using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateDecryptor(key, iv), CryptoStreamMode.Read))
+            {
+                var plainTextBytes = new byte[encryptedBytes.Length];
+
+                var fraction = plainTextBytes.Length / 100;
+
+                var length = fraction;
+
+                outputStream.Read(encryptedBytes, 0, encryptedBytes.Length);
+
+                // probably should be changed to be more expandable -> more path options and shit
+                memoryStream.Position = 0;
+
+                for (var i = 1; length <= plainTextBytes.Length; i++)
+                {
+                    cryptoStream.Read(plainTextBytes, 0, fraction);
+                    length += fraction;
+                    _backgroundWorker.ReportProgress(i);
+                }
+
+                memoryStream.Position = 0;
+
+                memoryStream.CopyTo(outputFileStream);
+            }
         }
 
         // Load 3DES key from generated file
@@ -121,32 +151,48 @@ namespace BSK_Proj1_Logic
             return key;
         }
 
-        private string EncryptFileTest(Stream fin, TripleDESCryptoServiceProvider tdes)
+        private string EncryptFileToXml(TripleDESCryptoServiceProvider tdes, string filePath)
         {
-            // todo: make it a binary batch array processing method -> for big files and progress bar updates
-            var key = LoadTripleDESKey();
-            var iv = LoadTripleDESIV();
+            var tempFile = File.Create("temp.txt");
+            var outputStream = new CryptoStream(tempFile, new ToBase64Transform(), CryptoStreamMode.Write);
 
-            var bytes = new byte[fin.Length];
-
-            using (var ms = new MemoryStream())
+            using (var fileStream = new FileStream(filePath, FileMode.Open))
             {
-                fin.CopyTo(ms);
-                bytes = ms.ToArray();
+                // todo: make it a binary batch array processing method -> for big files and progress bar updates
+                var key = LoadTripleDESKey();
+                var iv = LoadTripleDESIV();
+
+
+                using (var memoryStream = new MemoryStream())
+                using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateEncryptor(key, iv), CryptoStreamMode.Write))
+                {
+                    var fraction = fileStream.Length / 100;
+
+                    var fin = new byte[fraction];
+
+                    var length = fraction;
+
+                    for (var i = 1; length <= fileStream.Length; i++)
+                    {
+                        fileStream.Read(fin, 0, (int)fraction);
+
+                        cryptoStream.Write(fin, 0, fin.Length);
+                        length += fraction;
+                        if (i % 2 == 0)
+                        {
+                            _backgroundWorker.ReportProgress(i / 2);
+                        }
+                    }
+                    cryptoStream.FlushFinalBlock();
+                    memoryStream.Position = 0;
+                    memoryStream.CopyTo(outputStream);
+                }
             }
 
-            var encryptedText = string.Empty;
-
-            using (var memoryStream = new MemoryStream())
-            using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateEncryptor(key, iv), CryptoStreamMode.Write))
-            {
-                cryptoStream.Write(bytes, 0, bytes.Length);
-                cryptoStream.FlushFinalBlock();
-
-                var cipheredText = memoryStream.ToArray();
-                encryptedText = Convert.ToBase64String(cipheredText);
-            }
-
+            tempFile.Close();
+            var encryptedText = File.ReadAllText("temp.txt");
+            File.Delete("temp.txt");
+            outputStream.Close();
             return encryptedText;
         }
 
