@@ -82,31 +82,38 @@ namespace BSK_Proj1_Logic
             var iv = LoadTripleDESIV();
 
             var encryptedBytes = Convert.FromBase64String(encryptedText);
+            var bytesDeepCopy = encryptedBytes.Select(x => x).ToList();
 
             using (var memoryStream = new MemoryStream(encryptedBytes))
             using (var outputFileStream = new FileStream(Path.GetFileNameWithoutExtension(fileName) + extension, FileMode.OpenOrCreate))
             using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateDecryptor(key, iv), CryptoStreamMode.Read))
             {
-                var plainTextBytes = new byte[encryptedBytes.Length];
-
-                var fraction = plainTextBytes.Length / 100;
-
-                var length = fraction;
-
-
                 // probably should be changed to be more expandable -> more path options and shit
                 memoryStream.Position = 0;
 
-                //for (var i = 1; length <= plainTextBytes.Length; i++)
-                //{
-                //    cryptoStream.Read(plainTextBytes, 0, (int)plainTextBytes.Length);
-                //    length += fraction;
-                //    _backgroundWorker.ReportProgress(i);
-                //}
-                cryptoStream.Read(encryptedBytes, 0, (int)encryptedBytes.Length);
+                var oldPercentage = 0.0;
+
+                var fin = new byte[encryptedBytes.Length];
+
+                for (var i = 0; i < encryptedBytes.Length; i++)
+                {
+                    cryptoStream.Read(encryptedBytes, i, 1);
+
+                    var newPercentage = ((double)i / (double)encryptedBytes.Length) * 100.0;
+                    if ((int)oldPercentage != (int)newPercentage)
+                    {
+                        _backgroundWorker.ReportProgress((int)newPercentage + 1);
+                        oldPercentage = newPercentage;
+                    }
+                }
+
 
                 memoryStream.Position = 0;
-                
+
+                memoryStream.Read(fin, 0, encryptedBytes.Length);
+
+                memoryStream.Position = 0;
+
                 memoryStream.CopyTo(outputFileStream);
             }
         }
@@ -165,27 +172,26 @@ namespace BSK_Proj1_Logic
                 using (var memoryStream = new MemoryStream())
                 using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateEncryptor(key, iv), CryptoStreamMode.Write))
                 {
-                    var fraction = fileStream.Length / 100;
-
                     var fin = new byte[fileStream.Length];
 
-                    var length = fraction;
 
-                    fileStream.Read(fin, 0, (int)fileStream.Length);
+                    var oldPercentage = 0.0;
+                    for (var i = 0; i < fileStream.Length; i++)
+                    {
 
-                    cryptoStream.Write(fin, 0, (int)fileStream.Length);
+                        fileStream.Read(fin, 0, 1);
 
-                    //for (var i = 1; length <= fileStream.Length; i++)
-                    //{
-                    //    fileStream.Read(fin, 0, (int)fraction);
+                        cryptoStream.Write(fin, 0, 1);
 
-                    //    cryptoStream.Write(fin, 0, fin.Length);
-                    //    length += fraction;
-                    //    if (i % 2 == 0)
-                    //    {
-                    //        _backgroundWorker.ReportProgress(i / 2);
-                    //    }
-                    //}
+                        var newPercentage = ((double)i / (double)fileStream.Length) * 100.0;
+                        if ((int)oldPercentage != (int)newPercentage)
+                        {
+                            _backgroundWorker.ReportProgress((int)newPercentage + 1);
+                            oldPercentage = newPercentage;
+                        }
+                    }
+
+
                     cryptoStream.FlushFinalBlock();
                     memoryStream.Position = 0;
                     memoryStream.CopyTo(outputStream);
