@@ -95,6 +95,15 @@ namespace BSK_Proj1_Logic
 
                 var fin = new byte[encryptedBytes.Length];
 
+                /*
+                 * the trick to optimize this would be to find the biggest
+                 * common denominator from 0 to 1% of filesize and iterate through it
+                 * so we can have nice data chunks and still update our progress bar
+                 * as we go on
+                 * 
+                 * it's something to discuss
+                 */
+
                 for (var i = 0; i < encryptedBytes.Length; i++)
                 {
                     cryptoStream.Read(encryptedBytes, i, 1);
