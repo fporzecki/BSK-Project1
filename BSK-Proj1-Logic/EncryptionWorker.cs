@@ -65,13 +65,13 @@ namespace BSK_Proj1_Logic
             var extension = file.Descendants().First(x => x.Name.LocalName == "FileExtension").Value;
 
 
-                var tdes = new TripleDESCryptoServiceProvider
-                {
-                    Mode = HelperClass.GetCipherMode(cipherMode)
-                };
+            var tdes = new TripleDESCryptoServiceProvider
+            {
+                Mode = HelperClass.GetCipherMode(cipherMode)
+            };
 
 
-                DecryptFileFromXml(dataInBase64, tdes, fileName, extension);
+            DecryptFileFromXml(dataInBase64, tdes, fileName, extension);
 
             reader.Close();
         }
@@ -85,7 +85,6 @@ namespace BSK_Proj1_Logic
 
             using (var memoryStream = new MemoryStream(encryptedBytes))
             using (var outputFileStream = new FileStream(Path.GetFileNameWithoutExtension(fileName) + extension, FileMode.OpenOrCreate))
-            using (var outputStream = new CryptoStream(memoryStream, new FromBase64Transform(), CryptoStreamMode.Read))
             using (var cryptoStream = new CryptoStream(memoryStream, tdes.CreateDecryptor(key, iv), CryptoStreamMode.Read))
             {
                 var plainTextBytes = new byte[encryptedBytes.Length];
@@ -94,20 +93,20 @@ namespace BSK_Proj1_Logic
 
                 var length = fraction;
 
-                outputStream.Read(encryptedBytes, 0, encryptedBytes.Length);
 
                 // probably should be changed to be more expandable -> more path options and shit
                 memoryStream.Position = 0;
 
-                for (var i = 1; length <= plainTextBytes.Length; i++)
-                {
-                    cryptoStream.Read(plainTextBytes, 0, fraction);
-                    length += fraction;
-                    _backgroundWorker.ReportProgress(i);
-                }
+                //for (var i = 1; length <= plainTextBytes.Length; i++)
+                //{
+                //    cryptoStream.Read(plainTextBytes, 0, (int)plainTextBytes.Length);
+                //    length += fraction;
+                //    _backgroundWorker.ReportProgress(i);
+                //}
+                cryptoStream.Read(encryptedBytes, 0, (int)encryptedBytes.Length);
 
                 memoryStream.Position = 0;
-
+                
                 memoryStream.CopyTo(outputFileStream);
             }
         }
@@ -168,21 +167,25 @@ namespace BSK_Proj1_Logic
                 {
                     var fraction = fileStream.Length / 100;
 
-                    var fin = new byte[fraction];
+                    var fin = new byte[fileStream.Length];
 
                     var length = fraction;
 
-                    for (var i = 1; length <= fileStream.Length; i++)
-                    {
-                        fileStream.Read(fin, 0, (int)fraction);
+                    fileStream.Read(fin, 0, (int)fileStream.Length);
 
-                        cryptoStream.Write(fin, 0, fin.Length);
-                        length += fraction;
-                        if (i % 2 == 0)
-                        {
-                            _backgroundWorker.ReportProgress(i / 2);
-                        }
-                    }
+                    cryptoStream.Write(fin, 0, (int)fileStream.Length);
+
+                    //for (var i = 1; length <= fileStream.Length; i++)
+                    //{
+                    //    fileStream.Read(fin, 0, (int)fraction);
+
+                    //    cryptoStream.Write(fin, 0, fin.Length);
+                    //    length += fraction;
+                    //    if (i % 2 == 0)
+                    //    {
+                    //        _backgroundWorker.ReportProgress(i / 2);
+                    //    }
+                    //}
                     cryptoStream.FlushFinalBlock();
                     memoryStream.Position = 0;
                     memoryStream.CopyTo(outputStream);
@@ -192,7 +195,6 @@ namespace BSK_Proj1_Logic
             tempFile.Close();
             var encryptedText = File.ReadAllText("temp.txt");
             File.Delete("temp.txt");
-            outputStream.Close();
             return encryptedText;
         }
 
